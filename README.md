@@ -12,6 +12,12 @@ Scripts for managing HTTP authentication in web servers.
 
 - [add_http_auth.sh](http-auth/add_http_auth.sh) - Add HTTP Basic authentication to an .htaccess file with support for IP-based access control and compatibility with both Apache 2.2 and 2.4
 
+### WordPress
+
+Scripts for managing WordPress installations.
+
+- [wp-cron.sh](wp-cron/wp-cron.sh) - Execute WordPress cron tasks via WP-CLI with support for multisite installations and Sentry monitoring via HTTP API (supports both Sentry.io and self-hosted instances with customizable API paths)
+
 ## Installation
 
 Clone the repository:
@@ -36,6 +42,13 @@ For example:
 ```bash
 cd http-auth
 ./add_http_auth.sh --help
+```
+
+Or:
+
+```bash
+cd wp-cron
+./wp-cron.sh --help
 ```
 
 ## Contributing
