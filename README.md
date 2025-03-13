@@ -10,7 +10,7 @@ This repository contains a collection of bash scripts organized by category:
 
 Scripts for managing HTTP authentication in web servers.
 
-- [add_http_auth.sh](http-auth/add_http_auth.sh) - Add HTTP Basic authentication to an .htaccess file
+- [add_http_auth.sh](http-auth/add_http_auth.sh) - Add HTTP Basic authentication to an .htaccess file with support for IP-based access control and compatibility with both Apache 2.2 and 2.4
 
 ## Installation
 

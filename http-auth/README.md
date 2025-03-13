@@ -16,6 +16,8 @@ A bash script to easily add HTTP Basic authentication to an .htaccess file.
 - Allows customization of username
 - Provides interactive or command-line password entry
 - Supports multiple encryption methods (bcrypt, md5, sha1)
+- Allows specific IP addresses to bypass authentication
+- Compatible with both Apache 2.2 and 2.4 syntax
 
 ## Requirements
 
@@ -61,6 +63,7 @@ This will:
 - Set up authentication with default values (username: admin)
 - Prompt you to enter a password
 - Use bcrypt encryption (most secure)
+- Use Apache 2.4 syntax (default)
 
 ### Command-line Options
 
@@ -72,6 +75,8 @@ Options:
   -u, --user      Username (default: 'admin')
   -s, --password  Password (if not specified, it will be asked interactively)
   -e, --encrypt   Encryption method: md5, bcrypt, sha1 (default: 'bcrypt')
+  -i, --ip        Comma-separated list of IP addresses allowed without authentication
+  -a, --apache    Apache version: 2.2 or 2.4 (default: '2.4')
   -h, --help      Display this help
 ```
 
@@ -101,10 +106,22 @@ Options:
 ./add_http_auth.sh -e md5
 ```
 
+#### Allow specific IP addresses to bypass authentication:
+
+```bash
+./add_http_auth.sh -i "192.168.1.100,10.0.0.5"
+```
+
+#### Specify Apache version (for older servers):
+
+```bash
+./add_http_auth.sh -a 2.2
+```
+
 #### Full example with all options:
 
 ```bash
-./add_http_auth.sh -f /var/www/html/.htaccess -p /etc/apache2/.htpasswd -u webmaster -s "my_secure_password" -e bcrypt
+./add_http_auth.sh -f /var/www/html/.htaccess -p /etc/apache2/.htpasswd -u webmaster -s "my_secure_password" -e bcrypt -i "192.168.1.100,10.0.0.5" -a 2.4
 ```
 
 ## How It Works
@@ -113,7 +130,8 @@ Options:
 2. It then checks if the .htaccess file already exists and if authentication is already configured
 3. If a password is not provided as an argument, it prompts the user to enter one
 4. It creates or updates the .htpasswd file with the username and hashed password
-5. Finally, it adds the necessary authentication directives to the .htaccess file
+5. If IP addresses are specified, it adds rules to allow those IPs to bypass authentication
+6. Finally, it adds the necessary authentication directives to the .htaccess file
 
 ## Encryption Methods
 
@@ -123,6 +141,41 @@ The script supports three encryption methods:
 2. **md5**: Compatible with most servers, requires the `openssl` command
 3. **sha1**: Stronger than md5 but less secure than bcrypt, requires the `openssl` command
 
+## IP-Based Access
+
+When you specify IP addresses with the `-i` option, the script adds rules to the .htaccess file that allow those IPs to access the protected content without authentication. This is useful for:
+
+- Office networks where you want to allow access without prompting for credentials
+- Development or staging environments where you want to restrict access but allow certain IPs
+- Monitoring services that need to access the site without authentication
+
+The IP addresses should be provided as a comma-separated list without spaces, for example: `192.168.1.100,10.0.0.5`
+
+## Apache Version Compatibility
+
+The script supports both Apache 2.2 and Apache 2.4 syntax for access control:
+
+### Apache 2.2 Syntax
+
+```apache
+SetEnvIf Remote_Addr "^(192\.168\.1\.100|10\.0\.0\.5)$" ALLOW_ACCESS
+Order deny,allow
+Deny from all
+Allow from env=ALLOW_ACCESS
+Satisfy any
+```
+
+### Apache 2.4 Syntax
+
+```apache
+<RequireAny>
+    Require ip 192.168.1.100 10.0.0.5
+    Require valid-user
+</RequireAny>
+```
+
+By default, the script uses Apache 2.4 syntax. If you're using an older Apache server (version 2.2), specify `-a 2.2` when running the script.
+
 ## Security Considerations
 
 - When using the `-s` option to specify a password on the command line, be aware that the password may be visible in the process list or command history
@@ -130,6 +183,7 @@ The script supports three encryption methods:
 - Make sure the .htpasswd file is stored in a location not accessible from the web
 - Ensure proper file permissions are set on both .htaccess and .htpasswd files
 - Use bcrypt encryption when possible for better security
+- Be careful when allowing IP addresses to bypass authentication, as IP addresses can be spoofed
 
 ## Troubleshooting
 
@@ -148,6 +202,14 @@ The script supports three encryption methods:
 4. **Authentication not working in browser**
    - Ensure your web server is configured to allow .htaccess overrides
    - Check that the path to the .htpasswd file in the .htaccess is correct and accessible by the web server
+
+5. **IP-based access not working**
+   - Make sure your Apache server has the required modules enabled:
+     - For Apache 2.2: `mod_setenvif`, `mod_authz_host`
+     - For Apache 2.4: `mod_authz_core`, `mod_authz_host`
+   - Check that you're using the correct IP address format
+   - Verify that your server is properly detecting the client's IP address
+   - Ensure you're using the correct Apache version syntax (`-a 2.2` or `-a 2.4`)
 
 ## License
 
