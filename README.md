@@ -18,6 +18,7 @@ Scripts for managing WordPress installations.
 
 - [wp-cron.sh](wp-cron-sentry/wp-cron.sh) - Execute WordPress cron tasks via WP-CLI with support for multisite installations and Sentry monitoring via HTTP API (supports both Sentry.io and self-hosted instances with customizable API paths)
 - [wp-cron.sh](wp-cron-healthchecks/wp-cron.sh) - Execute WordPress cron tasks via WP-CLI with support for multisite installations and Healthchecks.io monitoring (start/success/fail pings)
+- [wp-rocket-cache.sh](wp-rocket-cache/wp-rocket-cache.sh) - Clear WP-Rocket cache via WP-CLI with support for multisite installations and automatic detection of active WP-Rocket instances
 
 ## Installation
 
@@ -53,6 +54,9 @@ cd wp-cron-sentry
 
 cd wp-cron-healthchecks
 ./wp-cron.sh --help
+
+cd wp-rocket-cache
+./wp-rocket-cache.sh --help
 ```
 
 ## Contributing
