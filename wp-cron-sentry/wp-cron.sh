@@ -223,57 +223,82 @@ log "INFO" "Starting WordPress cron execution..."
 log "INFO" "Using WP-CLI command: $WP_COMMAND"
 log "INFO" "WordPress path: $WP_PATH"
 
+# Multisite handling
+run_cron_for_site() {
+    local site_url="$1"
+    local start_time end_time duration exit_code
+    
+    log "INFO" "Running cron for site: $site_url"
+    if [ -n "$site_url" ]; then
+        local CMD="$WP_CLI --path=$WP_PATH --url=$site_url cron event run --due-now"
+    else
+        local CMD="$WP_CLI --path=$WP_PATH cron event run --due-now"
+    fi
+    start_time=$(date +%s)
+    if timeout $TIMEOUT $CMD; then
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
+        log "INFO" "WordPress cron executed successfully for $site_url in $duration seconds."
+        return 0
+    else
+        exit_code=$?
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
+        if [ $exit_code -eq 124 ]; then
+            log "ERROR" "WordPress cron execution timed out for $site_url after $TIMEOUT seconds."
+        else
+            log "ERROR" "WordPress cron execution failed for $site_url with exit code $exit_code after $duration seconds."
+        fi
+        return $exit_code
+    fi
+}
+
 # Generate a check-in ID for Sentry
 check_in_id=""
 if [ "$USE_SENTRY" = "true" ]; then
     check_in_id=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "manual-$(date +%s)")
     log "INFO" "Generated check-in ID for Sentry: $check_in_id"
-    
     # Send in_progress status to Sentry
     send_to_sentry "in_progress" "$check_in_id"
 fi
 
-# Record start time
-start_time=$(date +%s)
-
-# Run the cron command with timeout
-if timeout $TIMEOUT $WP_COMMAND cron event run --due-now; then
-    # Record end time and calculate duration
-    end_time=$(date +%s)
-    duration=$((end_time - start_time))
-    
-    log "INFO" "WordPress cron executed successfully in $duration seconds."
-    
-    # Send success to Sentry
-    if [ "$USE_SENTRY" = "true" ]; then
-        send_to_sentry "ok" "$check_in_id"
+# Main execution logic
+if [ -n "$WP_URL" ]; then
+    # Single site or specific site in multisite
+    if run_cron_for_site "$WP_URL"; then
+        [ "$USE_SENTRY" = "true" ] && send_to_sentry "ok" "$check_in_id"
+        exit 0
+    else
+        [ "$USE_SENTRY" = "true" ] && send_to_sentry "error" "$check_in_id"
+        exit 1
     fi
-    
-    exit 0
 else
-    # Get the exit code
-    exit_code=$?
-    
-    # Record end time and calculate duration
-    end_time=$(date +%s)
-    duration=$((end_time - start_time))
-    
-    # Check if it was a timeout
-    if [ $exit_code -eq 124 ]; then
-        log "ERROR" "WordPress cron execution timed out after $TIMEOUT seconds."
-        
-        # Send timeout error to Sentry
-        if [ "$USE_SENTRY" = "true" ]; then
-            send_to_sentry "error" "$check_in_id"
+    # Detect if multisite
+    IS_MULTISITE=$($WP_CLI --path=$WP_PATH eval 'echo is_multisite() ? "yes" : "no";' 2>/dev/null)
+    if [ "$IS_MULTISITE" = "yes" ]; then
+        log "INFO" "Multisite detected. Running cron for all sites."
+        SITE_URLS=$($WP_CLI --path=$WP_PATH site list --field=url 2>/dev/null)
+        EXIT_CODE=0
+        for site_url in $SITE_URLS; do
+            if ! run_cron_for_site "$site_url"; then
+                EXIT_CODE=1
+            fi
+        done
+        if [ $EXIT_CODE -eq 0 ]; then
+            [ "$USE_SENTRY" = "true" ] && send_to_sentry "ok" "$check_in_id"
+            exit 0
+        else
+            [ "$USE_SENTRY" = "true" ] && send_to_sentry "error" "$check_in_id"
+            exit 1
         fi
     else
-        log "ERROR" "WordPress cron execution failed with exit code $exit_code after $duration seconds."
-        
-        # Send error to Sentry
-        if [ "$USE_SENTRY" = "true" ]; then
-            send_to_sentry "error" "$check_in_id"
+        # Single site
+        if run_cron_for_site ""; then
+            [ "$USE_SENTRY" = "true" ] && send_to_sentry "ok" "$check_in_id"
+            exit 0
+        else
+            [ "$USE_SENTRY" = "true" ] && send_to_sentry "error" "$check_in_id"
+            exit 1
         fi
     fi
-    
-    exit $exit_code
 fi 

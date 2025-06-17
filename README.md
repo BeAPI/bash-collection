@@ -16,7 +16,8 @@ Scripts for managing HTTP authentication in web servers.
 
 Scripts for managing WordPress installations.
 
-- [wp-cron.sh](wp-cron/wp-cron.sh) - Execute WordPress cron tasks via WP-CLI with support for multisite installations and Sentry monitoring via HTTP API (supports both Sentry.io and self-hosted instances with customizable API paths)
+- [wp-cron.sh](wp-cron-sentry/wp-cron.sh) - Execute WordPress cron tasks via WP-CLI with support for multisite installations and Sentry monitoring via HTTP API (supports both Sentry.io and self-hosted instances with customizable API paths)
+- [wp-cron.sh](wp-cron-healthchecks/wp-cron.sh) - Execute WordPress cron tasks via WP-CLI with support for multisite installations and Healthchecks.io monitoring (start/success/fail pings)
 
 ## Installation
 
@@ -47,7 +48,10 @@ cd http-auth
 Or:
 
 ```bash
-cd wp-cron
+cd wp-cron-sentry
+./wp-cron.sh --help
+
+cd wp-cron-healthchecks
 ./wp-cron.sh --help
 ```
 
